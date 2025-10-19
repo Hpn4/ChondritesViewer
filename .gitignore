@@ -1,3 +1,8 @@
+# Images
+resources/data
+build/
+node
+
 # Prerequisites
 *.d
 
