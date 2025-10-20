@@ -1,13 +1,27 @@
 #include "ImageView.h"
+
 #include <QDebug>
 #include <QFile>
 
-ImageView::ImageView(const std::string &imagePath, QWidget *parent)
+ImageView::ImageView(const VImage& image,
+                     bool grayscale,
+                     std::shared_ptr<ImageTransform> sharedTransform,
+                     QWidget *parent)
     : QOpenGLWidget(parent),
-      loader_(std::make_unique<ImageTileLoader>(imagePath))
+      image_(image),
+      grayscale_(grayscale),
+      sharedTransform_(sharedTransform)
 {
     zoom_ = 1.0f;
     transform_.setToIdentity();
+
+    if (sharedTransform_) {
+        connect(sharedTransform_.get(), &ImageTransform::transformChanged, this, [this]() {
+            this->transform_ = sharedTransform_->data.transform;
+            this->zoom_ = sharedTransform_->data.zoom;
+            this->update();
+        });
+    }
 }
 
 void ImageView::initializeGL() {
@@ -34,7 +48,7 @@ void ImageView::initializeGL() {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(indices),indices,GL_STATIC_DRAW);
 
     QString vertPath = "resources/shaders/image.vert";
-    QString fragPath = "resources/shaders/image.frag";
+    QString fragPath = grayscale_ ? "resources/shaders/gray.frag" : "resources/shaders/image.frag";
 
     QFile vertFile(vertPath);
     QFile fragFile(fragPath);
@@ -64,12 +78,17 @@ void ImageView::uploadTexture() {
     if(texture_) delete texture_;
 
     texture_ = new QOpenGLTexture(QOpenGLTexture::Target2D);
-    texture_->setFormat(QOpenGLTexture::RGB8_UNorm);
-    texture_->setSize(loader_->width(), loader_->height());
+    texture_->setFormat(grayscale_ ? QOpenGLTexture::R8_UNorm : QOpenGLTexture::RGB8_UNorm);
+    texture_->setSize(image_.width(), image_.height());
     texture_->allocateStorage();
 
+    // Load the image
+    void* data = image_.write_to_memory(nullptr);
+
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    texture_->setData(QOpenGLTexture::RGB, QOpenGLTexture::UInt8, loader_->data());
+    texture_->setData(grayscale_ ? QOpenGLTexture::Red : QOpenGLTexture::RGB, QOpenGLTexture::UInt8, data);
+
+    g_free(data); // Free CPU side
 
     texture_->setMinificationFilter(QOpenGLTexture::Nearest);
     texture_->setMagnificationFilter(QOpenGLTexture::Nearest);
@@ -94,8 +113,6 @@ void ImageView::resizeGL(int w,int h) {
 
 void ImageView::wheelEvent(QWheelEvent *e)
 {
-    if (!loader_) return;
-
     float delta = e->angleDelta().y() / 800.0f;
     float factor = 1.0f + delta;
 
@@ -114,13 +131,20 @@ void ImageView::wheelEvent(QWheelEvent *e)
     float nx_ = nx - (nx - ox) * factor;
     float ny_ = ny - (ny - oy) * factor;
 
-    transform_.setToIdentity();
-    transform_.translate(nx_, ny_, 0);
-    transform_.scale(zoom_ * factor, zoom_ * factor, 1.0f);
+    QMatrix4x4 t;
+    t.setToIdentity();
+    t.translate(nx_, ny_, 0);
+    t.scale(zoom_ * factor, zoom_ * factor, 1.0f);
 
-    zoom_ *= factor;
+    float newZoom = zoom_ * factor;
 
-    update();
+    if (sharedTransform_) {
+        sharedTransform_->setTransform(t, newZoom);
+    } else {
+        transform_ = t;
+        zoom_ = newZoom;
+        update();
+    }
 }
 
 void ImageView::mousePressEvent(QMouseEvent *e)
@@ -130,14 +154,19 @@ void ImageView::mousePressEvent(QMouseEvent *e)
 
 void ImageView::mouseMoveEvent(QMouseEvent *e)
 {
-    if (!loader_) return;
-
     QPointF d = e->pos() - lastMouse_;
     lastMouse_ = e->pos();
 
     // Convertir le delta écran en delta image
     QVector3D deltaScene = transform_.inverted().mapVector(QVector3D(d.x(), d.y(), 0));
 
-    transform_.translate(deltaScene.x() / 300, -deltaScene.y() / 300, 0);
-    update();
+    QMatrix4x4 t = transform_;
+    t.translate(deltaScene.x() / 300, -deltaScene.y() / 300, 0);
+
+    if (sharedTransform_) {
+        sharedTransform_->setTransform(t, zoom_);
+    } else {
+        transform_ = t;
+        update();
+    }
 }

@@ -1,3 +1,5 @@
+include(FetchContent)
+
 cmake_minimum_required(VERSION 3.16)
 project(SEMViewer LANGUAGES CXX)
 
@@ -5,6 +7,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
+
+FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
+FetchContent_MakeAvailable(json)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGLWidgets)
 find_package(PkgConfig REQUIRED)
@@ -19,15 +24,15 @@ add_executable(sem_viewer
     src/MainWindow.h
     src/ImageView.cpp
     src/ImageView.h
-    src/ImageTileLoader.cpp
-    src/ImageTileLoader.h
-    src/SyncController.cpp
-    src/SyncController.h
+    src/ImageLoader.cpp
+    src/ImageLoader.h
+    src/ImageTransform.h
 )
 
 target_link_libraries(sem_viewer
     Qt6::Widgets
     Qt6::OpenGLWidgets
+    nlohmann_json::nlohmann_json
     ${VIPS_LIBRARIES}
 )
 
