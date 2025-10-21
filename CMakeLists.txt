@@ -8,6 +8,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+cmake_policy(SET CMP0135 NEW)
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
 FetchContent_MakeAvailable(json)
 
@@ -26,6 +27,10 @@ add_executable(sem_viewer
     src/ImageView.h
     src/ImageLoader.cpp
     src/ImageLoader.h
+    src/PaintLabel.cpp
+    src/PaintLabel.h
+    src/ImageLabel.cpp
+    src/ImageLabel.h
     src/ImageTransform.h
 )
 

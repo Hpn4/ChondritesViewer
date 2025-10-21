@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# sudo pacman -S libvips qt6-base qt6-tools
+# sudo pacman -S libvips qt6-base qt6-tools openslide
 
 set -e  # Exit on error
 

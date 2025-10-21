@@ -24,10 +24,54 @@ ImageView::ImageView(const VImage& image,
     }
 }
 
+ImageView::~ImageView() {
+    makeCurrent();
+
+    texture_.destroy();
+    vbo_.destroy();
+    ebo_.destroy();
+    vao_.destroy();
+
+    doneCurrent();
+}
+
 void ImageView::initializeGL() {
     initializeOpenGLFunctions();
-    glClearColor(0.2f,0.2f,0.2f,1.0f);
 
+    if (imageLabel_)
+        imageLabel_->initialize();
+
+    if (paintLabel_)
+        paintLabel_->initGL();
+
+    if (imageLabel_ && paintLabel_)
+        imageLabel_->setLabelTexture(paintLabel_->labelTexture());
+
+    glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+
+    initShaders();
+    initGeometry();
+    uploadTexture();
+}
+
+void ImageView::initShaders() {
+    QString vertPath = "resources/shaders/image.vert";
+    QString fragPath = grayscale_ ? "resources/shaders/gray.frag" : "resources/shaders/image.frag";
+
+    bool read = program_.addShaderFromSourceFile(QOpenGLShader::Vertex, vertPath);
+    read &= program_.addShaderFromSourceFile(QOpenGLShader::Fragment, fragPath);
+
+    if (!read) {
+        qDebug() << "Failed to open shader files";
+        return;
+    }
+
+    program_.link();
+    if (!program_.isLinked())
+        qDebug() << "Shader link failed:" << program_.log();
+}
+
+void ImageView::initGeometry() {
     GLfloat vertices[] = {
         -1.f,-1.f, 0.f,0.f,
          1.f,-1.f, 1.f,0.f,
@@ -36,98 +80,74 @@ void ImageView::initializeGL() {
     };
     GLuint indices[] = {0,1,2, 2,3,0};
 
-    glGenVertexArrays(1,&vao_);
-    glBindVertexArray(vao_);
+    vao_.create();
+    vao_.bind();
 
-    glGenBuffers(1,&vbo_);
-    glBindBuffer(GL_ARRAY_BUFFER,vbo_);
-    glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STATIC_DRAW);
+    vbo_.create();
+    vbo_.bind();
+    vbo_.allocate(vertices, sizeof(vertices));
 
-    glGenBuffers(1,&ebo_);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,ebo_);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(indices),indices,GL_STATIC_DRAW);
+    ebo_.create();
+    ebo_.bind();
+    ebo_.allocate(indices, sizeof(indices));
 
-    QString vertPath = "resources/shaders/image.vert";
-    QString fragPath = grayscale_ ? "resources/shaders/gray.frag" : "resources/shaders/image.frag";
+    program_.enableAttributeArray(0);
+    program_.setAttributeBuffer(0, GL_FLOAT, 0, 2, 4 * sizeof(float));
+    program_.enableAttributeArray(1);
+    program_.setAttributeBuffer(1, GL_FLOAT, 2 * sizeof(float), 2, 4 * sizeof(float));
 
-    QFile vertFile(vertPath);
-    QFile fragFile(fragPath);
-    if(!vertFile.open(QFile::ReadOnly) || !fragFile.open(QFile::ReadOnly)) {
-        qDebug() << "Failed to open shader files";
-        return;
-    }
-
-    QString vertSrc = vertFile.readAll();
-    QString fragSrc = fragFile.readAll();
-
-    program_.addShaderFromSourceCode(QOpenGLShader::Vertex, vertSrc);
-    program_.addShaderFromSourceCode(QOpenGLShader::Fragment, fragSrc);
-    program_.link();
-    if(!program_.isLinked())
-        qDebug() << "Shader link failed:" << program_.log();
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,4*sizeof(float),(void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,4*sizeof(float),(void*)(2*sizeof(float)));
-
-    uploadTexture();
+    vao_.release();
 }
 
 void ImageView::uploadTexture() {
-    if(texture_) delete texture_;
+    texture_.destroy();
+    texture_.create();
+    texture_.setFormat(grayscale_ ? QOpenGLTexture::R8_UNorm : QOpenGLTexture::RGB8_UNorm);
+    texture_.setSize(image_.width(), image_.height());
+    texture_.allocateStorage();
 
-    texture_ = new QOpenGLTexture(QOpenGLTexture::Target2D);
-    texture_->setFormat(grayscale_ ? QOpenGLTexture::R8_UNorm : QOpenGLTexture::RGB8_UNorm);
-    texture_->setSize(image_.width(), image_.height());
-    texture_->allocateStorage();
-
-    // Load the image
     void* data = image_.write_to_memory(nullptr);
-
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    texture_->setData(grayscale_ ? QOpenGLTexture::Red : QOpenGLTexture::RGB, QOpenGLTexture::UInt8, data);
 
-    g_free(data); // Free CPU side
+    texture_.setData(grayscale_ ? QOpenGLTexture::Red : QOpenGLTexture::RGB, QOpenGLTexture::UInt8, data);
+    g_free(data);
 
-    texture_->setMinificationFilter(QOpenGLTexture::Nearest);
-    texture_->setMagnificationFilter(QOpenGLTexture::Nearest);
-    texture_->setWrapMode(QOpenGLTexture::ClampToEdge);
+    texture_.setMinificationFilter(QOpenGLTexture::Nearest);
+    texture_.setMagnificationFilter(QOpenGLTexture::Nearest);
+    texture_.setWrapMode(QOpenGLTexture::ClampToEdge);
 }
 
 void ImageView::paintGL() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     program_.bind();
-    texture_->bind(0);
+    texture_.bind(0);
     program_.setUniformValue("tex", 0);
     program_.setUniformValue("transform", transform_);
 
-    glBindVertexArray(vao_);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    vao_.bind();
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    vao_.release();
+
+    if (imageLabel_)
+        imageLabel_->draw(transform_);
 }
 
-void ImageView::resizeGL(int w,int h) {
-    glViewport(0,0,w,h);
+void ImageView::resizeGL(int w, int h) {
+    glViewport(0, 0, w, h);
 }
 
-void ImageView::wheelEvent(QWheelEvent *e)
-{
+void ImageView::wheelEvent(QWheelEvent *e) {
     float delta = e->angleDelta().y() / 800.0f;
     float factor = 1.0f + delta;
 
-    // Position de la souris en pixels
     QPointF mousePos = e->position();
-
-    // Convertir en coordonnées normalisées [-1,1]
     float nx = 2.0f * mousePos.x() / width() - 1.0f;
     float ny = 1.0f - 2.0f * mousePos.y() / height();
 
-    // Extraire la translation actuelle
-    float ox = transform_(0,3);
-    float oy = transform_(1,3);
+    float ox = transform_(0, 3);
+    float oy = transform_(1, 3);
 
-    // Calculer la nouvelle translation pour garder le point sous la souris fixe
     float nx_ = nx - (nx - ox) * factor;
     float ny_ = ny - (ny - oy) * factor;
 
@@ -147,17 +167,20 @@ void ImageView::wheelEvent(QWheelEvent *e)
     }
 }
 
-void ImageView::mousePressEvent(QMouseEvent *e)
-{
+void ImageView::mousePressEvent(QMouseEvent *e) {
+    if (paintLabel_)
+        paintLabel_->mousePressEvent(e->pos());
+
     lastMouse_ = e->pos();
 }
 
-void ImageView::mouseMoveEvent(QMouseEvent *e)
-{
+void ImageView::mouseMoveEvent(QMouseEvent *e) {
+    if (paintLabel_)
+        paintLabel_->mouseMoveEvent(e->pos());
+
     QPointF d = e->pos() - lastMouse_;
     lastMouse_ = e->pos();
 
-    // Convertir le delta écran en delta image
     QVector3D deltaScene = transform_.inverted().mapVector(QVector3D(d.x(), d.y(), 0));
 
     QMatrix4x4 t = transform_;
@@ -169,4 +192,9 @@ void ImageView::mouseMoveEvent(QMouseEvent *e)
         transform_ = t;
         update();
     }
+}
+
+void ImageView::mouseReleaseEvent(QMouseEvent *e) {
+    if (paintLabel_)
+        paintLabel_->mouseReleaseEvent(e->pos());
 }
