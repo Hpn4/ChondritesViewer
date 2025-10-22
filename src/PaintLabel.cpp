@@ -1,133 +1,150 @@
 #include "PaintLabel.h"
-#include "ImageTransform.h"
-#include <QOpenGLShader>
 #include <QDebug>
-#include <cmath>
 
-PaintLabel::PaintLabel(int width, int height, std::shared_ptr<ImageTransform> sharedTransform)
-    : texW_(width),
-      texH_(height),
-      sharedTransform_(sharedTransform)
-{ }
+PaintLabel::PaintLabel(int width, int height)
+    : texW_(width), texH_(height)
+{}
 
 PaintLabel::~PaintLabel() {
-    if (!glInitialized_) return;
-    //makeCurrent();
-
     vbo_.destroy();
+    ebo_.destroy();
     vao_.destroy();
-    labelTex_.destroy();
     fbo_.reset();
-
-    //doneCurrent();
 }
 
-bool PaintLabel::initGL() {
-    if (glInitialized_) return true;
+void PaintLabel::initGL() {
+    if(glInitialized_) return;
 
     initializeOpenGLFunctions();
 
-    // Shader program
-    if (!paintProg_.addShaderFromSourceFile(QOpenGLShader::Vertex, "resources/shaders/paint/paint_brush.vert") ||
-        !paintProg_.addShaderFromSourceFile(QOpenGLShader::Fragment, "resources/shaders/paint/paint_brush.frag") ||
-        !paintProg_.link())
-    {
-        qWarning() << "PaintLabel shader error:" << paintProg_.log();
-        return false;
-    }
+    // Shader vertex + fragment pour cercle
+    const char* vertSrc = R"(
+        #version 330 core
+        layout(location = 0) in vec2 aPos;
+        layout(location = 1) in vec2 aUV;
+        void main() { gl_Position = vec4(aPos,0.0,1.0); }
+    )";
 
-    // Quad VAO + VBO
+    const char* fragSrc = R"(
+        #version 330 core
+        uniform vec2 center;   // position cercle en pixels
+        uniform float radius;
+        uniform float label;
+        out float FragColor;
+        void main() {
+            vec2 uv = gl_FragCoord.xy;
+            float d = distance(uv, center);
+            if(d < radius)
+                FragColor = 1.0;
+            else
+                discard;
+        }
+    )";
+
+    paintProg_.addShaderFromSourceCode(QOpenGLShader::Vertex, vertSrc);
+    paintProg_.addShaderFromSourceCode(QOpenGLShader::Fragment, fragSrc);
+    paintProg_.link();
+
+    if (!paintProg_.isLinked())
+        qDebug() << "Shader link failed:" << paintProg_.log();
+
+    GLfloat vertices[] = {
+        -1.f,-1.f, 0.f,0.f,
+         1.f,-1.f, 1.f,0.f,
+         1.f, 1.f, 1.f,1.f,
+        -1.f, 1.f, 0.f,1.f
+    };
+    GLuint indices[] = {0,1,2, 2,3,0};
+    
     vao_.create();
     vao_.bind();
-
+    
     vbo_.create();
     vbo_.bind();
-    vbo_.allocate(4 * 2 * sizeof(float)); // 4 verts x 2 floats
-    int posLoc = paintProg_.attributeLocation("aPos");
-    paintProg_.enableAttributeArray(posLoc);
-    paintProg_.setAttributeBuffer(posLoc, GL_FLOAT, 0, 2, 2 * sizeof(float));
+    vbo_.allocate(vertices, sizeof(vertices));
+    
+    ebo_.create();
+    ebo_.bind();
+    ebo_.allocate(indices, sizeof(indices));
+
+    paintProg_.enableAttributeArray(0);
+    paintProg_.setAttributeBuffer(0, GL_FLOAT, 0, 2, 4 * sizeof(float));
+    paintProg_.enableAttributeArray(1);
+    paintProg_.setAttributeBuffer(1, GL_FLOAT, 2 * sizeof(float), 2, 4 * sizeof(float));
+
     vao_.release();
 
-    // Label texture
-    labelTex_.create();
-    labelTex_.setSize(texW_, texH_);
-    labelTex_.setFormat(QOpenGLTexture::R8_UNorm);
-    labelTex_.allocateStorage();
-    labelTex_.setMinificationFilter(QOpenGLTexture::Nearest);
-    labelTex_.setMagnificationFilter(QOpenGLTexture::Nearest);
-
-    // FBO
+    // FBO R8
     QOpenGLFramebufferObjectFormat fmt;
     fmt.setAttachment(QOpenGLFramebufferObject::NoAttachment);
     fmt.setTextureTarget(GL_TEXTURE_2D);
     fmt.setInternalTextureFormat(GL_R8);
     fbo_ = std::make_unique<QOpenGLFramebufferObject>(texW_, texH_, fmt);
 
-    // Clear initial FBO
+    // clear
     fbo_->bind();
-    const GLuint clearVal[4] = {0,0,0,0};
-    glClearBufferuiv(GL_COLOR, 0, clearVal);
+    glClearColor(0,0,0,1);
+    glClear(GL_COLOR_BUFFER_BIT);
     fbo_->release();
 
     glInitialized_ = true;
-    return true;
 }
 
-PaintLabel::Point PaintLabel::screenToTexel(const QPointF& screenPos) const {
-    if (!sharedTransform_) return {0,0};
-    const auto& t = sharedTransform_->data.transform;
-    QMatrix4x4 inv = t.inverted();
-    QVector4D v(screenPos.x(), screenPos.y(), 0.0f, 1.0f);
-    QVector4D img = inv * v;
-    int tx = qBound(0, int(std::round(img.x())), texW_-1);
-    int ty = qBound(0, int(std::round(img.y())), texH_-1);
-    return {tx, ty};
-}
-
-void PaintLabel::mousePressEvent(const QPointF& screenPos) {
-    if (!glInitialized_) return;
+void PaintLabel::mousePressEvent(float x, float y, QOpenGLVertexArrayObject& vao) {
     strokeActive_ = true;
-    paintStampToFBO(screenToTexel(screenPos), brush_.label, brush_.radius);
+    paintCircle(x, y, vao);
 }
 
-void PaintLabel::mouseMoveEvent(const QPointF& screenPos) {
-    if (!strokeActive_) return;
-    paintStampToFBO(screenToTexel(screenPos), brush_.label, brush_.radius);
+void PaintLabel::mouseMoveEvent(float x, float y, QOpenGLVertexArrayObject& vao) {
+    if(strokeActive_)
+        paintCircle(x, y, vao);
 }
 
-void PaintLabel::mouseReleaseEvent(const QPointF&) {
+void PaintLabel::mouseReleaseEvent() {
     strokeActive_ = false;
 }
 
-void PaintLabel::paintStampToFBO(const Point& center, unsigned int label, float radius) {
-    if (!labelTex_.isCreated()) return;
-
-    int minx = qBound(0, int(center.x - radius), texW_ - 1);
-    int maxx = qBound(0, int(center.x + radius), texW_ - 1);
-    int miny = qBound(0, int(center.y - radius), texH_ - 1);
-    int maxy = qBound(0, int(center.y + radius), texH_ - 1);
-
-    GLfloat quad[8] = {
-        (GLfloat)minx, (GLfloat)miny,
-        (GLfloat)maxx, (GLfloat)miny,
-        (GLfloat)minx, (GLfloat)maxy,
-        (GLfloat)maxx, (GLfloat)maxy
-    };
-
-    fbo_->bind();
-    glViewport(0, 0, texW_, texH_);
-
-    vao_.bind();
-    vbo_.bind();
-    vbo_.write(0, quad, sizeof(quad));
-
+void PaintLabel::paintCircle(float x, float y, QOpenGLVertexArrayObject& vao) {
+    if(!glInitialized_) return;
+    
+    // Vérifications AVANT le draw
+    qDebug() << "=== DEBUG DRAW ===";
+    qDebug() << "VAO ID:" << vao_.objectId();
+    qDebug() << "VBO ID:" << vbo_.bufferId();
+    qDebug() << "EBO ID:" << ebo_.bufferId();
+    qDebug() << "EBO type:" << ebo_.type();
+    qDebug() << "FBO valid:" << fbo_->isValid();
+    
+    // Vérifier ce qui est bindé
+    GLint boundVAO = 0, boundEBO = 0, boundVBO = 0;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &boundVAO);
+    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &boundEBO);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &boundVBO);
+    qDebug() << "Before bind - VAO:" << boundVAO << "EBO:" << boundEBO << "VBO:" << boundVBO;
+    
     paintProg_.bind();
-    paintProg_.setUniformValue("uResolution", QVector2D((float)texW_, (float)texH_));
-    paintProg_.setUniformValue("uCenter", QVector2D((float)center.x, (float)center.y));
-    paintProg_.setUniformValue("uRadius", radius);
-    paintProg_.setUniformValue("uLabel", static_cast<int>(label));
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    fbo_->bind();
+    glViewport(0,0,texW_,texH_);
+    
+    paintProg_.setUniformValue("center", QVector2D(x, texH_-y));
+    paintProg_.setUniformValue("radius", brushRadius_);
+    paintProg_.setUniformValue("label", float(brushLabel_));
+    
+    vao.bind();
+    
+    // Vérifier après bind
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &boundVAO);
+    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &boundEBO);
+    qDebug() << "After VAO bind - VAO:" << boundVAO << "EBO:" << boundEBO;
+    
+    qDebug() << "About to draw...";
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    qDebug() << "Draw done!";
+    
+    GLenum err = glGetError();
+    qDebug() << "GL Error after draw:" << err;
+    
+    vao.release();
     paintProg_.release();
-
     fbo_->release();
 }

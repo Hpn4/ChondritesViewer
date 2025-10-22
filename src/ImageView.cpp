@@ -6,11 +6,13 @@
 ImageView::ImageView(const VImage& image,
                      bool grayscale,
                      std::shared_ptr<ImageTransform> sharedTransform,
-                     QWidget *parent)
+                     QWidget *parent,
+                     QOpenGLContext *context)
     : QOpenGLWidget(parent),
       image_(image),
       grayscale_(grayscale),
-      sharedTransform_(sharedTransform)
+      sharedTransform_(sharedTransform),
+      context_(context)
 {
     zoom_ = 1.0f;
     transform_.setToIdentity();
@@ -22,6 +24,7 @@ ImageView::ImageView(const VImage& image,
             this->update();
         });
     }
+
 }
 
 ImageView::~ImageView() {
@@ -47,7 +50,7 @@ void ImageView::initializeGL() {
     if (imageLabel_ && paintLabel_)
         imageLabel_->setLabelTexture(paintLabel_->labelTexture());
 
-    glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
     initShaders();
     initGeometry();
@@ -120,6 +123,9 @@ void ImageView::uploadTexture() {
 void ImageView::paintGL() {
     glClear(GL_COLOR_BUFFER_BIT);
 
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     program_.bind();
     texture_.bind(0);
     program_.setUniformValue("tex", 0);
@@ -130,7 +136,9 @@ void ImageView::paintGL() {
     vao_.release();
 
     if (imageLabel_)
-        imageLabel_->draw(transform_);
+        imageLabel_->draw(transform_, vao_);
+
+    //glDisable(GL_BLEND);
 }
 
 void ImageView::resizeGL(int w, int h) {
@@ -169,14 +177,39 @@ void ImageView::wheelEvent(QWheelEvent *e) {
 
 void ImageView::mousePressEvent(QMouseEvent *e) {
     if (paintLabel_)
-        paintLabel_->mousePressEvent(e->pos());
+    {
+        // Coord souris [0,1]
+        float u = float(e->pos().x()) / width();
+        float v = float(e->pos().y()) / height();
+
+        // NDC [-1,1]
+        QVector4D mouseNDC(2*u-1, 1-2*v, 0.f, 1.f);
+
+        // Coord texture pixels
+        QVector4D texNDC = transform_.inverted() * mouseNDC;
+        float texX = (texNDC.x() + 1)*0.5f * image_.width();
+        float texY = (1.f - (texNDC.y() + 1)*0.5f) * image_.height();
+
+        makeCurrent();
+        paintLabel_->mousePressEvent(texX, texY, vao_);
+        doneCurrent();
+
+        sharedTransform_->setTransform(transform_, zoom_);
+    }
 
     lastMouse_ = e->pos();
 }
 
 void ImageView::mouseMoveEvent(QMouseEvent *e) {
     if (paintLabel_)
-        paintLabel_->mouseMoveEvent(e->pos());
+    {
+        makeCurrent();
+        paintLabel_->mouseMoveEvent(e->pos().x(), e->pos().y(), vao_);
+        doneCurrent();
+
+        // Force redraw of all views
+        sharedTransform_->setTransform(transform_, zoom_);
+    }
 
     QPointF d = e->pos() - lastMouse_;
     lastMouse_ = e->pos();
@@ -196,5 +229,5 @@ void ImageView::mouseMoveEvent(QMouseEvent *e) {
 
 void ImageView::mouseReleaseEvent(QMouseEvent *e) {
     if (paintLabel_)
-        paintLabel_->mouseReleaseEvent(e->pos());
+        paintLabel_->mouseReleaseEvent();
 }

@@ -45,12 +45,17 @@ void ImageLabel::initialize() {
     glInitialized_ = true;
 }
 
-void ImageLabel::draw(const QMatrix4x4& transform) {
+void ImageLabel::draw(const QMatrix4x4& transform, QOpenGLVertexArrayObject& vao) {
     if (!enabled_ || labelTex_ == 0)
         return;
 
+    glFlush();
+    GLenum err = glGetError();
+    if(err != GL_NO_ERROR)
+        qDebug() << "zz OpenGL error before draw:" << err;
+
     program_.bind();
-    vao_.bind();
+    vao.bind();
 
     program_.setUniformValue("u_transform", transform);
     program_.setUniformValue("u_alpha", alpha_);
@@ -58,12 +63,13 @@ void ImageLabel::draw(const QMatrix4x4& transform) {
     glBindTexture(GL_TEXTURE_2D, labelTex_);
     program_.setUniformValue("u_labelTex", 0);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    glDisable(GL_BLEND);
-    vao_.release();
+    vao.release();
     program_.release();
+
+    glFlush();
+     err = glGetError();
+if(err != GL_NO_ERROR)
+        qDebug() << "za  OpenGL error before draw:" << err;
 }

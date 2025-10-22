@@ -12,7 +12,7 @@ public:
     ~ImageLabel();
 
     void initialize();
-    void draw(const QMatrix4x4& transform);
+    void draw(const QMatrix4x4& transform, QOpenGLVertexArrayObject& vao);
 
     void setLabelTexture(GLuint tex) { labelTex_ = tex; }
     void setAlpha(float a) { alpha_ = a; }

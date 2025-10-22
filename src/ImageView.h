@@ -5,6 +5,7 @@
 #include "ImageLabel.h"
 
 #include <QOpenGLWidget>
+#include <QOpenGLContext>
 #include <QOpenGLFunctions_3_3_Core>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
@@ -23,7 +24,8 @@ public:
     explicit ImageView(const VImage& image,
                        bool grayscale = false,
                        std::shared_ptr<ImageTransform> sharedTransform = nullptr,
-                       QWidget *parent = nullptr);
+                       QWidget *parent = nullptr,
+                       QOpenGLContext *context = nullptr);
     ~ImageView() override;
 
     void setPaintLabel(std::shared_ptr<PaintLabel> paintLabel) { paintLabel_ = paintLabel; }
@@ -41,6 +43,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *e) override;
 
 private:
+    QOpenGLContext *context_;
     const VImage image_;
     QOpenGLShaderProgram program_;
     QOpenGLTexture texture_{QOpenGLTexture::Target2D};
