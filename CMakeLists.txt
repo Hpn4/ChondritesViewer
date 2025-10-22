@@ -31,6 +31,8 @@ add_executable(sem_viewer
     src/PaintLabel.h
     src/ImageLabel.cpp
     src/ImageLabel.h
+    src/SharedGLResources.h
+    src/SharedGLResources.cpp
     src/ImageTransform.h
 )
 

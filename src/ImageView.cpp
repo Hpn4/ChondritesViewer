@@ -7,12 +7,13 @@ ImageView::ImageView(const VImage& image,
                      bool grayscale,
                      std::shared_ptr<ImageTransform> sharedTransform,
                      QWidget *parent,
-                     QOpenGLContext *context)
+                     SharedGLResources *sharedRes)
     : QOpenGLWidget(parent),
       image_(image),
       grayscale_(grayscale),
       sharedTransform_(sharedTransform),
-      context_(context)
+      sharedRes_(sharedRes),
+      imageLabel_(sharedRes)
 {
     zoom_ = 1.0f;
     transform_.setToIdentity();
@@ -25,14 +26,17 @@ ImageView::ImageView(const VImage& image,
         });
     }
 
+    // IMPORTANT : Partager le contexte OpenGL
+    QSurfaceFormat fmt;
+    fmt.setVersion(4, 6);
+    fmt.setProfile(QSurfaceFormat::CoreProfile);
+    setFormat(fmt);
 }
 
 ImageView::~ImageView() {
     makeCurrent();
 
     texture_.destroy();
-    vbo_.destroy();
-    ebo_.destroy();
     vao_.destroy();
 
     doneCurrent();
@@ -41,14 +45,13 @@ ImageView::~ImageView() {
 void ImageView::initializeGL() {
     initializeOpenGLFunctions();
 
-    if (imageLabel_)
-        imageLabel_->initialize();
+    imageLabel_.initialize();
 
     if (paintLabel_)
+    {
         paintLabel_->initGL();
-
-    if (imageLabel_ && paintLabel_)
-        imageLabel_->setLabelTexture(paintLabel_->labelTexture());
+        imageLabel_.setLabelTexture(paintLabel_->labelTexture());
+    }
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
@@ -75,24 +78,11 @@ void ImageView::initShaders() {
 }
 
 void ImageView::initGeometry() {
-    GLfloat vertices[] = {
-        -1.f,-1.f, 0.f,0.f,
-         1.f,-1.f, 1.f,0.f,
-         1.f, 1.f, 1.f,1.f,
-        -1.f, 1.f, 0.f,1.f
-    };
-    GLuint indices[] = {0,1,2, 2,3,0};
-
     vao_.create();
     vao_.bind();
 
-    vbo_.create();
-    vbo_.bind();
-    vbo_.allocate(vertices, sizeof(vertices));
-
-    ebo_.create();
-    ebo_.bind();
-    ebo_.allocate(indices, sizeof(indices));
+    sharedRes_->getVBO()->bind();
+    sharedRes_->getEBO()->bind();
 
     program_.enableAttributeArray(0);
     program_.setAttributeBuffer(0, GL_FLOAT, 0, 2, 4 * sizeof(float));
@@ -135,8 +125,7 @@ void ImageView::paintGL() {
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
     vao_.release();
 
-    if (imageLabel_)
-        imageLabel_->draw(transform_, vao_);
+    imageLabel_.draw(transform_);
 
     //glDisable(GL_BLEND);
 }

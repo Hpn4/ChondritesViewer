@@ -1,0 +1,61 @@
+#include "SharedGLResources.h"
+
+#include <QDebug>
+
+SharedGLResources::SharedGLResources(QWidget *parent)
+    : QOpenGLWidget(parent) {}
+
+SharedGLResources::~SharedGLResources() {
+    makeCurrent();
+        
+    if (vbo) {
+        vbo->destroy();
+        delete vbo;
+        vbo = nullptr;
+    }
+
+    if (ebo) {
+        ebo->destroy();
+        delete ebo;
+        ebo = nullptr;
+    }
+        
+    doneCurrent();
+}
+
+void SharedGLResources::initializeGL() {
+    initializeOpenGLFunctions();
+
+    // 4. VBO / EBO partagés
+    GLfloat vertices[] = {
+        // Position    // TexCoords
+        -1.f, -1.f,    0.f, 0.f,
+         1.f, -1.f,    1.f, 0.f,
+         1.f,  1.f,    1.f, 1.f,
+        -1.f,  1.f,    0.f, 1.f
+    };
+    
+    GLuint indices[] = {0, 1, 2, 2, 3, 0};
+    
+    vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    if (!vbo->create()) {
+        qDebug() << "Failed to create VBO";
+        doneCurrent();
+        return;
+    }
+    vbo->bind();
+    vbo->allocate(vertices, sizeof(vertices));
+    vbo->release();
+    
+    ebo = new QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+    if (!ebo->create()) {
+        qDebug() << "Failed to create EBO";
+        doneCurrent();
+        return;
+    }
+    ebo->bind();
+    ebo->allocate(indices, sizeof(indices));
+    ebo->release();
+    
+    qDebug() << "SharedGLResources initialized successfully";
+}

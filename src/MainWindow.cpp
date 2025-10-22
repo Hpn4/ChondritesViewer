@@ -4,6 +4,7 @@
 #include "ImageLoader.h"
 #include "PaintLabel.h"
 #include "ImageLabel.h"
+#include "SharedGLResources.h"
 
 #include <vector>
 #include <string>
@@ -18,24 +19,22 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     ImageLoader loader("resources/project.json");
 
+    auto *sharedResources = new SharedGLResources(this);
+
     auto sharedTransform = std::make_shared<ImageTransform>();
     auto sharedPaint = std::make_shared<PaintLabel>(loader.getWidth(), loader.getHeight());
-    auto sharedLabel = std::make_shared<ImageLabel>();
-
-    QOpenGLContext *mainCtx = new QOpenGLContext();
-    mainCtx->setFormat(QSurfaceFormat::defaultFormat());
-    mainCtx->create();
 
     //sharedPaint->setBrushLabel(1);
     //sharedPaint->setBrushRadius(500.f);
 
+    grid_->addWidget(sharedResources, 0, 0);
+
     auto views = loader.prepareViews();
 
     for (const auto& [row, col, img, grayscale] : views) {
-        auto *view = new ImageView(img, grayscale, sharedTransform, this, mainCtx);
-        //view->context()->setShareContext(mainCtx);
+        auto *view = new ImageView(img, grayscale, sharedTransform, this, sharedResources);
+
         view->setPaintLabel(sharedPaint);
-        view->setImageLabel(sharedLabel);
 
         grid_->addWidget(view, row, col);
     }

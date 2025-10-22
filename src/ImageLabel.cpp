@@ -1,11 +1,12 @@
 #include "ImageLabel.h"
 #include <QVector>
 
-ImageLabel::ImageLabel() { }
+ImageLabel::ImageLabel(SharedGLResources *sharedRes) 
+    : sharedRes_(sharedRes)
+{ }
 
 ImageLabel::~ImageLabel() {
     vao_.destroy();
-    vbo_.destroy();
 }
 
 void ImageLabel::initialize() {
@@ -13,49 +14,35 @@ void ImageLabel::initialize() {
 
     initializeOpenGLFunctions();
 
-    // Quad plein écran (NDC)
-    GLfloat vertices[] = {
-        -1.f, -1.f,
-         1.f, -1.f,
-        -1.f,  1.f,
-         1.f,  1.f
-    };
-
-    // VAO
-    vao_.create();
-    vao_.bind();
-
-    // VBO
-    vbo_.create();
-    vbo_.bind();
-    vbo_.allocate(vertices, sizeof(vertices));
-
     program_.addShaderFromSourceFile(QOpenGLShader::Vertex, "resources/shaders/paint/overlay.vert");
     program_.addShaderFromSourceFile(QOpenGLShader::Fragment, "resources/shaders/paint/overlay.frag");
     program_.link();
     if (!program_.isLinked())
         qDebug() << "Shader link failed:" << program_.log();
 
+    // VAO
+    vao_.create();
+    vao_.bind();
+
+    sharedRes_->getVBO()->bind();
+    sharedRes_->getEBO()->bind();
+
     program_.enableAttributeArray(0);
-    program_.setAttributeBuffer(0, GL_FLOAT, 0, 2, 2 * sizeof(GLfloat));
+    program_.setAttributeBuffer(0, GL_FLOAT, 0, 2, 4 * sizeof(float));
+    program_.enableAttributeArray(1);
+    program_.setAttributeBuffer(1, GL_FLOAT, 2 * sizeof(float), 2, 4 * sizeof(float));
 
     vao_.release();
-    vbo_.release();
 
     glInitialized_ = true;
 }
 
-void ImageLabel::draw(const QMatrix4x4& transform, QOpenGLVertexArrayObject& vao) {
+void ImageLabel::draw(const QMatrix4x4& transform) {
     if (!enabled_ || labelTex_ == 0)
         return;
 
-    glFlush();
-    GLenum err = glGetError();
-    if(err != GL_NO_ERROR)
-        qDebug() << "zz OpenGL error before draw:" << err;
-
     program_.bind();
-    vao.bind();
+    vao_.bind();
 
     program_.setUniformValue("u_transform", transform);
     program_.setUniformValue("u_alpha", alpha_);
@@ -65,11 +52,6 @@ void ImageLabel::draw(const QMatrix4x4& transform, QOpenGLVertexArrayObject& vao
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
-    vao.release();
+    vao_.release();
     program_.release();
-
-    glFlush();
-     err = glGetError();
-if(err != GL_NO_ERROR)
-        qDebug() << "za  OpenGL error before draw:" << err;
 }
