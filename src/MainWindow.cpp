@@ -12,6 +12,7 @@
 #include <QOpenGLContext>
 #include <QSurfaceFormat>
 #include <QOpenGLWidget>
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     central_ = new QWidget(this);
@@ -19,10 +20,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     ImageLoader loader("resources/project.json");
 
-    auto *sharedResources = new SharedGLResources(this);
+    auto *sharedResources = new SharedGLResources(loader.getWidth(), loader.getHeight(), this);
 
     auto sharedTransform = std::make_shared<ImageTransform>();
-    auto sharedPaint = std::make_shared<PaintLabel>(loader.getWidth(), loader.getHeight());
 
     //sharedPaint->setBrushLabel(1);
     //sharedPaint->setBrushRadius(500.f);
@@ -33,8 +33,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     for (const auto& [row, col, img, grayscale] : views) {
         auto *view = new ImageView(img, grayscale, sharedTransform, this, sharedResources);
-
-        view->setPaintLabel(sharedPaint);
 
         grid_->addWidget(view, row, col);
     }

@@ -2,8 +2,8 @@
 
 #include <QDebug>
 
-SharedGLResources::SharedGLResources(QWidget *parent)
-    : QOpenGLWidget(parent) {}
+SharedGLResources::SharedGLResources(int width, int height, QWidget *parent)
+    : QOpenGLWidget(parent), width_(width), height_(height) {}
 
 SharedGLResources::~SharedGLResources() {
     makeCurrent();
@@ -18,6 +18,11 @@ SharedGLResources::~SharedGLResources() {
         ebo->destroy();
         delete ebo;
         ebo = nullptr;
+    }
+
+    if (fbo) {
+        delete ebo;
+        fbo = nullptr;
     }
         
     doneCurrent();
@@ -56,6 +61,20 @@ void SharedGLResources::initializeGL() {
     ebo->bind();
     ebo->allocate(indices, sizeof(indices));
     ebo->release();
+
+    QOpenGLFramebufferObjectFormat fmt;
+    fmt.setAttachment(QOpenGLFramebufferObject::NoAttachment);
+    fmt.setTextureTarget(GL_TEXTURE_2D);
+    fmt.setInternalTextureFormat(GL_R8);
+    fbo = new QOpenGLFramebufferObject(width_, height_, fmt);
+
+    // clear
+    fbo->bind();
+    glClearColor(0,0,0,1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    fbo->release();
+
+    glFlush();
     
     qDebug() << "SharedGLResources initialized successfully";
 }

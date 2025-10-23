@@ -10,8 +10,6 @@ ImageLabel::~ImageLabel() {
 }
 
 void ImageLabel::initialize() {
-    if (glInitialized_) return;
-
     initializeOpenGLFunctions();
 
     program_.addShaderFromSourceFile(QOpenGLShader::Vertex, "resources/shaders/paint/overlay.vert");
@@ -34,7 +32,7 @@ void ImageLabel::initialize() {
 
     vao_.release();
 
-    glInitialized_ = true;
+    labelTex_ = sharedRes_->getFBO()->texture();
 }
 
 void ImageLabel::draw(const QMatrix4x4& transform) {

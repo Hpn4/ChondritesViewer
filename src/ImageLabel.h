@@ -15,14 +15,11 @@ public:
     void initialize();
     void draw(const QMatrix4x4& transform);
 
-    void setLabelTexture(GLuint tex) { labelTex_ = tex; }
     void setAlpha(float a) { alpha_ = a; }
     void setEnabled(bool e) { enabled_ = e; }
 
 private:
     SharedGLResources* sharedRes_;
-
-    bool glInitialized_ = false;
 
     GLuint labelTex_ = 0;
 

@@ -28,8 +28,6 @@ public:
                        SharedGLResources *sharedRes = nullptr);
     ~ImageView() override;
 
-    void setPaintLabel(std::shared_ptr<PaintLabel> paintLabel) { paintLabel_ = paintLabel; }
-
 protected:
     void initializeGL() override;
     void paintGL() override;
@@ -54,7 +52,7 @@ private:
     float zoom_ = 1.0f;
     std::shared_ptr<ImageTransform> sharedTransform_;
 
-    std::shared_ptr<PaintLabel> paintLabel_;
+    PaintLabel paintLabel_;
     ImageLabel imageLabel_;
 
     void uploadTexture();
