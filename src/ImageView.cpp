@@ -37,6 +37,10 @@ ImageView::~ImageView() {
     doneCurrent();
 }
 
+void ImageView::onLabelSelected(int index) {
+    paintLabel_.setBrushLabel(index);
+}
+
 void ImageView::initializeGL() {
     initializeOpenGLFunctions();
 
@@ -108,17 +112,31 @@ void ImageView::paintGL() {
     program_.bind();
     texture_.bind(0);
     program_.setUniformValue("tex", 0);
-    program_.setUniformValue("transform", transform_);
+    QMatrix4x4 finalTransform = projection_ * transform_;
+
+    program_.setUniformValue("transform", finalTransform);
 
     vao_.bind();
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
     vao_.release();
 
-    imageLabel_.draw(transform_);
+    imageLabel_.draw(finalTransform);
 }
 
 void ImageView::resizeGL(int w, int h) {
     glViewport(0, 0, w, h);
+
+    float widgetAspect = float(w) / float(h);
+    float imageAspect = float(image_.width()) / float(image_.height());
+
+    projection_.setToIdentity();
+    if (widgetAspect > imageAspect) {
+        // fenêtre plus large : ajuster X
+        projection_.ortho(-widgetAspect / imageAspect, widgetAspect / imageAspect, -1, 1, -1, 1);
+    } else {
+        // fenêtre plus haute : ajuster Y
+        projection_.ortho(-1, 1, -imageAspect / widgetAspect, imageAspect / widgetAspect, -1, 1);
+    }
 }
 
 void ImageView::wheelEvent(QWheelEvent *e) {
@@ -160,7 +178,9 @@ void ImageView::mousePressEvent(QMouseEvent *e) {
     QVector4D mouseNDC(2*u-1, 1-2*v, 0.f, 1.f);
 
     // Coord texture pixels
-    QVector4D texNDC = transform_.inverted() * mouseNDC;
+    QMatrix4x4 finalTransform = projection_ * transform_;
+    
+    QVector4D texNDC = finalTransform.inverted() * mouseNDC;
     float texX = (texNDC.x() + 1)*0.5f * image_.width();
     float texY = (1.f - (texNDC.y() + 1)*0.5f) * image_.height();
 

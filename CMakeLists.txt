@@ -33,6 +33,10 @@ add_executable(sem_viewer
     src/ImageLabel.h
     src/SharedGLResources.h
     src/SharedGLResources.cpp
+    src/widgets/ColorLabelList.h
+    src/widgets/ColorLabelList.cpp
+    src/widgets/CollapsibleWidget.h
+    src/widgets/CollapsibleWidget.cpp
     src/ImageTransform.h
 )
 

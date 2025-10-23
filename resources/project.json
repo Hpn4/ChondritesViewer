@@ -10,13 +10,10 @@
         "Si": "resources/data/Mosaic element_Si.tif"
 	},
 	"views": {
-		"cols": 2,
-		"rows": 2,
+		"cols": 1,
+		"rows": 1,
 		"datas": [
-			{ "col": 0, "row": 0, "grayscale": true, "r": "BSE" },
-			{ "col": 1, "row": 0, "grayscale": false, "r": "Mg", "g": "Si", "b": "0" },
-			{ "col": 0, "row": 1, "grayscale": false, "r": "Mg", "g": "Ca", "b": "Al" },
-			{ "col": 1, "row": 1, "grayscale": false, "r": "Fe", "g": "S", "b": "O" }
+			{ "col": 0, "row": 0, "grayscale": true, "r": "BSE" }
 		]
 	},
 	"features": [

@@ -38,6 +38,9 @@ protected:
     void mouseMoveEvent(QMouseEvent *e) override;
     void mouseReleaseEvent(QMouseEvent *e) override;
 
+public slots:
+    void onLabelSelected(int index);
+
 private:
     SharedGLResources *sharedRes_;
 
@@ -48,6 +51,8 @@ private:
 
     bool grayscale_;
     QMatrix4x4 transform_;
+    QMatrix4x4 projection_;
+
     QPoint lastMouse_;
     float zoom_ = 1.0f;
     std::shared_ptr<ImageTransform> sharedTransform_;

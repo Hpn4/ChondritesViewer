@@ -31,9 +31,23 @@ private:
     int texW_, texH_;
     bool strokeActive_ = false;
 
-    float brushRadius_ = 100.0f;
+    float brushRadius_ = .6f;
     uint8_t brushLabel_ = 1;
 
     QOpenGLShaderProgram paintProg_;
     QOpenGLVertexArrayObject vao_;
 };
+
+/*
+#577277 
+#468232
+#3c5e8b 
+#73bed3
+#a8ca58
+#e7d5b3 
+#7a367b
+#a53030
+#da863e
+#c65197 
+#884b2b
+*/

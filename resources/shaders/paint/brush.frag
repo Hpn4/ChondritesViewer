@@ -11,7 +11,7 @@ void main() {
     float d = distance(uv, center);
 
     if(d < radius)
-        FragColor = 1.0;
+        FragColor = label / 255.0;
     else
         discard;
 }
