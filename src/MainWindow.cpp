@@ -2,11 +2,12 @@
 #include "ImageView.h"
 #include "ImageTransform.h"
 #include "ImageLoader.h"
-#include "PaintLabel.h"
-#include "ImageLabel.h"
 #include "SharedGLResources.h"
 #include "widgets/ColorLabelList.h"
 #include "widgets/CollapsibleWidget.h"
+#include "modules/PaintVImage.h"
+#include "modules/PaintLabel.h"
+#include "modules/ImageLabel.h"
 
 #include <vector>
 #include <string>
@@ -49,7 +50,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     auto views = loader.prepareViews();
     for (const auto& [row, col, img, grayscale] : views) {
-        auto *view = new ImageView(img, grayscale, sharedTransform, this, sharedResources);
+        auto *view = new ImageView(sharedTransform, this, sharedResources);
+        view->addModule(std::make_unique<PaintVImage>(img, grayscale, sharedResources));
+        view->addModule(std::make_unique<PaintLabel>(sharedResources));
+        view->addModule(std::make_unique<ImageLabel>(sharedResources));
+
         grid_->addWidget(view, row, col);
 
         connect(labelSection, &ColorLabelList::labelSelected,

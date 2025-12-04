@@ -13,11 +13,13 @@ public:
     explicit SharedGLResources(int width, int height, QWidget *parent = nullptr);
     ~SharedGLResources();
 
-    // Accès aux ressources
     QOpenGLBuffer* getVBO() const { return vbo; }
     QOpenGLBuffer* getEBO() const { return ebo; }
 
     QOpenGLFramebufferObject* getFBO() const { return fbo; }
+
+    int texWidth() { return width_; }
+    int texHeight() { return height_; }
     
 protected:
     void initializeGL() override;

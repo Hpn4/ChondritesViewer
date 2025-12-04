@@ -1,23 +1,19 @@
 #include "ImageView.h"
 
 #include <QDebug>
-#include <QFile>
 
-ImageView::ImageView(const VImage& image,
-                     bool grayscale,
-                     std::shared_ptr<ImageTransform> sharedTransform,
+ImageView::ImageView(std::shared_ptr<ImageTransform> sharedTransform,
                      QWidget *parent,
                      SharedGLResources *sharedRes)
     : QOpenGLWidget(parent),
-      image_(image),
-      grayscale_(grayscale),
       sharedTransform_(sharedTransform),
-      sharedRes_(sharedRes),
-      imageLabel_(sharedRes),
-      paintLabel_(image.width(), image.height(), sharedRes)
+      sharedRes_(sharedRes)
 {
     zoom_ = 1.0f;
     transform_.setToIdentity();
+
+    width_ = sharedRes->texWidth();
+    height_ = sharedRes->texHeight();
 
     if (sharedTransform_) {
         connect(sharedTransform_.get(), &ImageTransform::transformChanged, this, [this]() {
@@ -30,111 +26,43 @@ ImageView::ImageView(const VImage& image,
 
 ImageView::~ImageView() {
     makeCurrent();
-
-    texture_.destroy();
-    vao_.destroy();
-
     doneCurrent();
 }
 
 void ImageView::onLabelSelected(int index) {
-    paintLabel_.setBrushLabel(index);
+    // paintLabel_.setBrushLabel(index);
 }
 
 void ImageView::initializeGL() {
     initializeOpenGLFunctions();
 
-    imageLabel_.initialize();
-    paintLabel_.initGL();
+    for (auto& m : modules)
+        m->initializeGL();
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-    initShaders();
-    initGeometry();
-    uploadTexture();
-
     qDebug() << "ImageView init";
-}
-
-void ImageView::initShaders() {
-    QString vertPath = "resources/shaders/image.vert";
-    QString fragPath = grayscale_ ? "resources/shaders/gray.frag" : "resources/shaders/image.frag";
-
-    bool read = program_.addShaderFromSourceFile(QOpenGLShader::Vertex, vertPath);
-    read &= program_.addShaderFromSourceFile(QOpenGLShader::Fragment, fragPath);
-
-    if (!read) {
-        qDebug() << "Failed to open shader files";
-        return;
-    }
-
-    program_.link();
-    if (!program_.isLinked())
-        qDebug() << "Shader link failed:" << program_.log();
-}
-
-void ImageView::initGeometry() {
-    vao_.create();
-    vao_.bind();
-
-    sharedRes_->getVBO()->bind();
-    sharedRes_->getEBO()->bind();
-
-    program_.enableAttributeArray(0);
-    program_.setAttributeBuffer(0, GL_FLOAT, 0, 2, 4 * sizeof(float));
-    program_.enableAttributeArray(1);
-    program_.setAttributeBuffer(1, GL_FLOAT, 2 * sizeof(float), 2, 4 * sizeof(float));
-
-    vao_.release();
-}
-
-void ImageView::uploadTexture() {
-    texture_.destroy();
-    texture_.create();
-    texture_.setFormat(grayscale_ ? QOpenGLTexture::R8_UNorm : QOpenGLTexture::RGB8_UNorm);
-    texture_.setSize(image_.width(), image_.height());
-    texture_.allocateStorage();
-
-    void* data = image_.write_to_memory(nullptr);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-    texture_.setData(grayscale_ ? QOpenGLTexture::Red : QOpenGLTexture::RGB, QOpenGLTexture::UInt8, data);
-    g_free(data);
-
-    texture_.setMinificationFilter(QOpenGLTexture::Nearest);
-    texture_.setMagnificationFilter(QOpenGLTexture::Nearest);
-    texture_.setWrapMode(QOpenGLTexture::ClampToEdge);
 }
 
 void ImageView::paintGL() {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    program_.bind();
-    texture_.bind(0);
-    program_.setUniformValue("tex", 0);
     QMatrix4x4 finalTransform = projection_ * transform_;
 
-    program_.setUniformValue("transform", finalTransform);
-
-    vao_.bind();
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-    vao_.release();
-
-    imageLabel_.draw(finalTransform);
+    for (auto& m : modules)
+        m->paintGL(finalTransform);
 }
 
 void ImageView::resizeGL(int w, int h) {
     glViewport(0, 0, w, h);
 
     float widgetAspect = float(w) / float(h);
-    float imageAspect = float(image_.width()) / float(image_.height());
+    float imageAspect = float(width_) / float(height_);
 
     projection_.setToIdentity();
     if (widgetAspect > imageAspect) {
-        // fenêtre plus large : ajuster X
         projection_.ortho(-widgetAspect / imageAspect, widgetAspect / imageAspect, -1, 1, -1, 1);
     } else {
-        // fenêtre plus haute : ajuster Y
         projection_.ortho(-1, 1, -imageAspect / widgetAspect, imageAspect / widgetAspect, -1, 1);
     }
 }
@@ -181,11 +109,14 @@ void ImageView::mousePressEvent(QMouseEvent *e) {
     QMatrix4x4 finalTransform = projection_ * transform_;
     
     QVector4D texNDC = finalTransform.inverted() * mouseNDC;
-    float texX = (texNDC.x() + 1)*0.5f * image_.width();
-    float texY = (1.f - (texNDC.y() + 1)*0.5f) * image_.height();
+    float texX = (texNDC.x() + 1)*0.5f * width_;
+    float texY = (1.f - (texNDC.y() + 1)*0.5f) * height_;
 
     makeCurrent();
-    paintLabel_.mousePressEvent(texX, texY);
+
+    for (auto& m : modules)
+        m->mousePressEvent(texX, texY);
+
     doneCurrent();
 
     sharedTransform_->setTransform(transform_, zoom_);
@@ -215,5 +146,6 @@ void ImageView::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void ImageView::mouseReleaseEvent(QMouseEvent *e) {
-    paintLabel_.mouseReleaseEvent();
+    for (auto& m : modules)
+        m->mouseReleaseEvent();
 }

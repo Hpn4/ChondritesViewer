@@ -1,4 +1,5 @@
 #include "ColorLabelList.h"
+
 #include <QVBoxLayout>
 #include <QRadioButton>
 #include <QButtonGroup>

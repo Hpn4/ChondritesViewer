@@ -27,17 +27,21 @@ add_executable(sem_viewer
     src/ImageView.h
     src/ImageLoader.cpp
     src/ImageLoader.h
-    src/PaintLabel.cpp
-    src/PaintLabel.h
-    src/ImageLabel.cpp
-    src/ImageLabel.h
     src/SharedGLResources.h
     src/SharedGLResources.cpp
+    src/ImageTransform.h
+    src/modules/ModuleBase.cpp
+    src/modules/ModuleBase.h
+    src/modules/PaintVImage.cpp
+    src/modules/PaintVImage.h
+    src/modules/PaintLabel.cpp
+    src/modules/PaintLabel.h
+    src/modules/ImageLabel.cpp
+    src/modules/ImageLabel.h
     src/widgets/ColorLabelList.h
     src/widgets/ColorLabelList.cpp
     src/widgets/CollapsibleWidget.h
     src/widgets/CollapsibleWidget.cpp
-    src/ImageTransform.h
 )
 
 target_link_libraries(sem_viewer

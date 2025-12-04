@@ -1,30 +1,26 @@
 #pragma once
 
-#include "SharedGLResources.h"
+#include "../SharedGLResources.h"
+#include "ModuleBase.h"
 
-#include <QOpenGLFunctions_3_3_Core>
-#include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QMatrix4x4>
 
-class ImageLabel : protected QOpenGLFunctions_3_3_Core {
+class ImageLabel : public ModuleBase {
 public:
     ImageLabel(SharedGLResources *sharedRes);
     ~ImageLabel();
 
-    void initialize();
-    void draw(const QMatrix4x4& transform);
+    void initializeGL() override;
+    void paintGL(const QMatrix4x4& transform) override;
 
     void setAlpha(float a) { alpha_ = a; }
     void setEnabled(bool e) { enabled_ = e; }
 
 private:
-    SharedGLResources* sharedRes_;
-
     GLuint labelTex_ = 0;
 
     QOpenGLVertexArrayObject vao_;
-    QOpenGLShaderProgram program_;
 
     float alpha_ = 0.5f;
     bool enabled_ = true;
