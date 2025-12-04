@@ -1,0 +1,15 @@
+{
+	"imgs": {
+		"BSE": "Mosaic element_BSE.tif"
+	},
+	"views": {
+		"cols": 2,
+		"rows": 2,
+		"datas": [
+			{ "col": 0, "row": 0, "grayscale": true, "r": "BSE" }
+		]
+	},
+	"features": [
+		"BSE", "Al", "Ca", "Fe", "Mg", "O", "S", "Si"
+	]
+}

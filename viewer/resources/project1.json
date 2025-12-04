@@ -1,0 +1,25 @@
+{
+	"imgs": {
+		"BSE": "Mosaic element_BSE.tif",
+        "Al": "Mosaic element_Al.tif",
+        "Ca": "Mosaic element_Ca.tif",
+        "Fe": "Mosaic element_Fe.tif",
+        "Mg": "Mosaic element_Mg.tif",
+        "O": "Mosaic element_O.tif",
+        "S": "Mosaic element_S.tif",
+        "Si": "Mosaic element_Si.tif"
+	},
+	"views": {
+		"cols": 2,
+		"rows": 2,
+		"datas": [
+			{ "col": 0, "row": 0, "grayscale": true, "r": "BSE" },
+			{ "col": 1, "row": 0, "grayscale": false, "r": "Mg", "g": "Si", "b": "0" },
+			{ "col": 0, "row": 1, "grayscale": false, "r": "Mg", "g": "Ca", "b": "Al" },
+			{ "col": 1, "row": 1, "grayscale": false, "r": "Fe", "g": "S", "b": "O" }
+		]
+	},
+	"features": [
+		"BSE", "Al", "Ca", "Fe", "Mg", "O", "S", "Si"
+	]
+}
