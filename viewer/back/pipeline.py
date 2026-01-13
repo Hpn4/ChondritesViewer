@@ -21,7 +21,7 @@ class Pipeline:
         self.log = Logger("Pipeline").logger
 
     def load_model(self):
-        model_path = resources.files("viewer.resources") / "lcnn_weights.pth"
+        model_path = resources.files("resources") / "lcnn_weights.pth"
         return CNN(str(model_path), device="cpu")
 
     # ===================== THREAD SETUP =====================

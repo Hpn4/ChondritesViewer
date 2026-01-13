@@ -46,8 +46,8 @@ class Layer(ABC):
         """
         Méthode utilitaire pour compiler et lier des shaders.
         """
-        vert = resources.files("viewer.resources.shaders") / vert_name
-        frag = resources.files("viewer.resources.shaders") / frag_name
+        vert = resources.files("resources.shaders") / vert_name
+        frag = resources.files("resources.shaders") / frag_name
 
         self.program = compileProgram(
             compileShader(vert.read_text(), GL_VERTEX_SHADER),

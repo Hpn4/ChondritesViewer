@@ -61,7 +61,7 @@ class ImageLoader:
 
             for key, path in imgs.items():
                 try:
-                    img_path = resources.files("viewer.resources.data") / path
+                    img_path = resources.files("resources.data") / path
                     img = self.load_single(img_path)
                     self.image_map[key] = img
                     self.height, self.width = img.shape[:2]

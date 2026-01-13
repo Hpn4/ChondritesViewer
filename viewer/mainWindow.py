@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
         self.data = {"selected_label": 1, "brush_size": 5.0}
         self.loader = loader
 
-        self.label_path = resources.files("viewer.resources") / "labels.png"
+        self.label_path = resources.files("resources") / "labels.png"
 
         QApplication.instance().installEventFilter(self)
 
