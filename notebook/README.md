@@ -21,3 +21,11 @@ Résultat: un peu mieux que KMeans, mais qu'un seul représentant par classe (be
 
 ### `Var5x5.ipynb`
 
+On pousse l'analyse précedente, cette fois-ci on prends tous les élements et toutes les classes (type I, type II, ...). Pour chaque classe on extrait environ 8 à 10 points et ensuite on calcul la moyenne, la variance, la variance de l'intensité du gradient et la variance de l'angle du gradient.
+
+Après quelques analyses on se rend compte que la moyenne est quasi suffisante pour discriminer et que les chondres de type II et la matrice sont très corrélées. On teste ensuite différentes combinaisons de features pour la segmentation et on trouve que la moyenne + les gradients marchent le mieux.
+
+Par contre c'est encore un peu bruité, donc peut-être qu'un petit modèle ML pourrait mieux se débrouiller.
+
+### `RandomForest.ipynb`
+
