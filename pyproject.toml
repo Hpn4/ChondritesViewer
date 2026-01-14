@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11, <3.13"
 dependencies = [
     "ipywidgets>=8.1.8",
+    "lazypredict>=0.2.16",
     "matplotlib>=3.10.7",
     "napari[pyqt5]>=0.6.6",
     "notebook>=7.5.2",

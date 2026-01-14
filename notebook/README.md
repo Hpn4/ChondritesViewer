@@ -29,3 +29,17 @@ Par contre c'est encore un peu bruité, donc peut-être qu'un petit modèle ML p
 
 ### `RandomForest.ipynb`
 
+Ce notebook reprend la même liste de point que dans `Var5x5` et lance une random forest dessus. Les résultats sont globalement pareils. On va donc passer à plus de données et à d'autres modèles de ML.
+
+### `Labels.ipynb`
+
+Ce notebook génère les données d'entraînements et de tests (c'est un split spatial). Les données sont lues depuis des fichiers de labels qui ont était préalablement remplis à la main à l'aide de Ilastik un logiciel d'annotation.
+
+### `Lazy.ipynb`
+
+On entraîne plusieurs modèles de ML sur les labels précédement extrait. On trouve que RandomForest et dérivé marche pas trop mal. Avec une plus fine évaluation on se rend compte qu'il y a beaucoup de bruit pour Carbontes, Type II et Matrices. Probablement parce que overfit, pas assez de données et difficilement distinguable.
+
+De plus les RF sont lentes, il seraient intéressant de passer sur du deep avec des modèles qui marche bien avec peu de données. On peut tenter des CNNs comme ça on à l'information de la localité.
+
+### `PatchCNN.ipynb`
+
