@@ -2,10 +2,27 @@
 
 Ce dossier recense les différentes recherches et expériences menés afin de trouver les bonnes pipelines.
 
-## Lecture
-
 Il est conseillé de lire dans l'ordre suivant
 
+## Segmentation
+
+Cette partie regroupe tous les notebooks qui se charge de segmenter pixelwise les classes:
+- Chondre type I
+- Mesostase type I
+- Chondre type II
+- Mesostase type II
+- Inclusion calcium aluminium (CAIs)
+- Matrice
+- Fer
+- Fer oxydé
+- Souffres
+- Epoxy
+- Carbonates
+
+Les méthodes prennents en entrée:
+- Une carte BSE
+- Les cartes EDS d'élements chimiques (S, Al, O, ...)
+- Des des gradient ou quotient / combinaisons des features au dessus
 
 ### `KMeans.ipynb`
 
@@ -43,3 +60,32 @@ De plus les RF sont lentes, il seraient intéressant de passer sur du deep avec 
 
 ### `PatchCNN.ipynb`
 
+On entraîne une seule architecture de modèle, le Patch CNN. C'est un modèle entièrement convolutionnels, sans couche linéaire finale, ce qui permet de traiter des entrées de taille variable et d’apprendre à partir d’annotations ponctuelles plutôt que d’images entièrement labellisées (style UNet).
+
+L’approche consiste à extraire des patches centrés sur des pixels annotés, à produire une carte de sorties à plusieurs canaux correspondant aux classes, puis à attribuer la classe du pixel central par argmax. Les entrées combinent un canal BSE et sept canaux EDS.
+
+Les modèles sont entraînés par validation croisée et évalués visuellement sur des images complètes.
+
+C'est le modèle qui à montré de loin les meilleurs performances et donc on s'est arrêté ici pour ce qui est de la classificatin pixel-wise.
+
+
+## Segmentation d'Instance
+
+Le but ici est de récupérer les cartes de prédiction pixel-wise des précédentes méthodes et de passer à object-wise.
+
+### `Watershed.ipynb`
+
+L'idée est d'appliquer un watershed et ensuite construire un graphe avec les régions du watershed et fusionner les régions si les signatures chimiques de régions adjacentes sont pas trop différentes.
+
+
+## Extraction de feature
+
+Ici on va calculer des stats.
+
+### `Stats.ipynb`
+
+Charge une segmentation d'instance et renvoie des métriques sur:
+- nombres de chondre
+- nombre éclatés
+- distribution des aires
+- distribution de la circularité, de la solidité (à quel point l'objet est pas troué), l'excentricité (si c'est plus rond ou ligne).
