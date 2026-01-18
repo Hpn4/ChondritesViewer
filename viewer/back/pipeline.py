@@ -22,7 +22,9 @@ class Pipeline:
 
     def load_model(self):
         model_path = resources.files("resources") / "lcnn_weights.pth"
-        return CNN(str(model_path), device="cpu")
+        model_hp_path = resources.files("resources") / "hp.json"
+
+        return CNN(str(model_path), str(model_hp_path), device="cpu")
 
     # ===================== THREAD SETUP =====================
     def start_inference(self):
@@ -31,7 +33,7 @@ class Pipeline:
             self.log.warning("Inference already running.")
             return
 
-        features = ["Ca","Al", "BSE", "Mg", "Si", "Fe", "S", "O"]
+        features = ["BSE", "Ca", "Al", "Mg", "Si", "Fe", "S", "O"]
 
         # Crée le thread et le worker
         self.worker_thread = QThread()
