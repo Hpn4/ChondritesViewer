@@ -18,29 +18,30 @@ class MainWindow(QMainWindow):
 
         QApplication.instance().installEventFilter(self)
 
-        # === Layout principal ===
         central_widget = QWidget(parent=self)
         main_layout = QHBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # ---- Ressources OpenGL partagées ----
         self.shared_res = SharedGLResources(loader.width, loader.height, data=self.data)
         self.shared_res.label_path = self.label_path
 
         self.view_grid = ViewGridWidget(loader, shared_res=self.shared_res, parent=central_widget)
 
-        # ---- Pipeline ----
         self.pipeline = Pipeline(self, loader, self.shared_res)
 
-        # ---- Panneau latéral gauche ----
         self.sidebar = SidebarWidget(self.data, views=self.view_grid.viewers, parent=central_widget)
 
-        # ---- Bouton d’inférence ----
+        # ---- Inference ----
         self.run_button = QPushButton("Run Inference")
         self.run_button.clicked.connect(self.pipeline.start_inference)
         self.sidebar.layout().addWidget(self.run_button)
 
-        # ---- Save button ----
+        # ---- Segmentation ----
+        self.segment_button = QPushButton("Run Segmentation")
+        self.segment_button.clicked.connect(self.pipeline.start_segmentation)
+        self.sidebar.layout().addWidget(self.segment_button)
+
+        # ---- Save ----
         self.save_button = QPushButton("Save Labels")
         self.save_button.clicked.connect(self.save_labels)
         self.sidebar.layout().addWidget(self.save_button)
@@ -59,7 +60,6 @@ class MainWindow(QMainWindow):
     def save_labels(self):
         self.shared_res.save_fbo_texture_to_file(self.label_path)
 
-    # ===================== EVENT KEYS =====================
     def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyPress:
             if event.key() == Qt.Key_Space:

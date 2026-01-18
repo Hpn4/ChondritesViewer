@@ -48,7 +48,7 @@ class CNN:
     def inference_generator(self, img_dict, feature_order, patch_size=1024, stride=1000):
         H, W = next(iter(img_dict.values())).shape
 
-        output_img = np.zeros((H, W), dtype=np.uint8)
+        self.output_img = np.zeros((H, W), dtype=np.uint8)
 
         for y in range(0, H, stride):
             for x in range(0, W, stride):
@@ -69,7 +69,7 @@ class CNN:
                 labels = self.center_labels(patch_tensor, labels)
 
                 out_h, out_w = labels.shape
-                output_img[y:y+out_h, x:x+out_w] = labels
+                self.output_img[y:y+out_h, x:x+out_w] = labels
                 colored_img = palette[labels]
 
                 yield (x, y, colored_img.shape[1], colored_img.shape[0], colored_img)

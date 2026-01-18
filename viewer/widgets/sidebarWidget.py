@@ -5,10 +5,9 @@ from PyQt5.QtWidgets import (
 from viewer.widgets import ColorLabelList, CollapsibleWidget
 
 class ViewerLayerWidget(QWidget):
-    """Widget pour gérer les layers d'un seul viewer"""
     def __init__(self, viewer_name, view, parent=None):
         super().__init__(parent)
-        self.layers = view.layers  # liste d'objets layer avec .name et .visible
+        self.layers = view.layers
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
         layout.setContentsMargins(10,10,0,0)
@@ -29,7 +28,6 @@ class ViewerLayerWidget(QWidget):
         return callback
 
 class LayerTabWidget(QTabWidget):
-    """Tab widget avec un tab par viewer"""
     def __init__(self, views, parent=None):
         super().__init__(parent)
 

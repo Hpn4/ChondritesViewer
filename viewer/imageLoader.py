@@ -17,7 +17,6 @@ class ImageLoader:
         self.load()
 
     def load_single(self, path):
-        # Chargement avec pyvips
         img = pyvips.Image.new_from_file(path, access="random")
 
         self.width = img.width
@@ -29,7 +28,6 @@ class ImageLoader:
 
         gray = r.ifthenelse(r, g.ifthenelse(g, b))
 
-        # Conversion en numpy et passage en niveau de gris
         arr = np.ndarray(buffer=gray.write_to_memory(),
                          dtype=np.uint8,
                          shape=(gray.height, gray.width))
@@ -37,7 +35,6 @@ class ImageLoader:
         return arr
 
     def load(self):
-        # Chargement du JSON
         try:
             with open(self.path, "r") as f:
                 self.data = json.load(f)
@@ -81,7 +78,6 @@ class ImageLoader:
             self.log.warning("No views found in JSON")
             return views
 
-        # Progress bar pour les vues
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -103,7 +99,7 @@ class ImageLoader:
                     r_chan = view.get("r", "0")
                     g_chan = view.get("g", "0")
                     b_chan = view.get("b", "0")
-                    # Assemblage RGB
+
                     img = np.stack([
                         self.image_map.get(r_chan, self.image_map["0"]),
                         self.image_map.get(g_chan, self.image_map["0"]),

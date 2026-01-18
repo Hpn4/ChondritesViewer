@@ -4,8 +4,9 @@ from viewer.layers.layer import Layer
 
 class PaintImageLayer(Layer):
     """
-    Layer qui affiche une image numpy.
+    Layer responsible to render a numpy image. Either in grayscale or in RGB
     """
+    
     def __init__(self, image: np.ndarray, grayscale: bool = True, name : str = "", shared_res=None):
         super().__init__(name, shared_res)
         self.image = image
@@ -16,7 +17,6 @@ class PaintImageLayer(Layer):
     def initialize_gl(self):
         self.shared_res.initializeGL()
 
-        # Choix des shaders selon grayscale
         vert_name = "image.vert"
         frag_name = "gray.frag" if self.grayscale else "image.frag"
         self.init_shaders(vert_name, frag_name)
@@ -33,7 +33,6 @@ class PaintImageLayer(Layer):
 
         FLOAT_SIZE = 4
 
-        # Attributs
         glEnableVertexAttribArray(0)
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * FLOAT_SIZE, ctypes.c_void_p(0))
         glEnableVertexAttribArray(1)

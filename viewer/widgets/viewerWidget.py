@@ -8,7 +8,7 @@ from OpenGL.GL import *
 
 class SharedTransform:
     """
-    Transform partagé entre plusieurs vues.
+    Transform shared with multiple view
     """
     def __init__(self):
         self.transform = QMatrix4x4()
@@ -26,7 +26,7 @@ class SharedTransform:
 
 class ViewerWidget(QOpenGLWidget):
     """
-    QOpenGLWidget qui gère plusieurs layers avec un transform partagé.
+    QOpenGLWidget who displays multiple layers. All views share the same transform
     """
     def __init__(self, shared_transform: SharedTransform = None, parent=None, width=1, height=1):
         super().__init__(parent)

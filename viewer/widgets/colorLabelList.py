@@ -4,7 +4,7 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor
 
 class ColorLabelList(QFrame):
-    labelSelected = pyqtSignal(int)  # signal émis quand un label est sélectionné
+    labelSelected = pyqtSignal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -15,11 +15,10 @@ class ColorLabelList(QFrame):
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         self.content_layout.setSpacing(2)
 
-        # Button group (exclusif)
+        # Button group
         self.button_group = QButtonGroup(self)
         self.button_group.setExclusive(True)
 
-        # Liste des labels et couleurs
         labels = [
             ("Chondre I", "#577277"),
             ("Chondre II", "#468232"),

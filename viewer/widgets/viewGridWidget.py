@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QGridLayout
 from viewer.layers import ImageLabelLayer, PaintLabelLayer, PaintImageLayer, ImagePredLayer
 from viewer.widgets.viewerWidget import ViewerWidget, SharedTransform
-from viewer.sharedGLResources import SharedGLResources
+from viewer.sharedGLResources import SharedGLResources, SharedTexture
 
 class ViewGridWidget(QWidget):
     def __init__(self, loader, shared_res=None, parent=None):
@@ -25,7 +25,8 @@ class ViewGridWidget(QWidget):
             viewer.add_layer(PaintImageLayer(img, grayscale, "EDS", shared_res=shared_res))
             viewer.add_layer(PaintLabelLayer("Painting", shared_res=shared_res))
             viewer.add_layer(ImageLabelLayer("Labeling", shared_res=shared_res))
-            viewer.add_layer(ImagePredLayer("Prediction", shared_res=shared_res))
+            viewer.add_layer(ImagePredLayer("Prediction", SharedTexture.PREDICTION, shared_res=shared_res))
+            viewer.add_layer(ImagePredLayer("Segmentation", SharedTexture.SEGMENTATION, shared_res=shared_res))
             
             grid_layout.addWidget(viewer, y, x)
             self.viewers.append(viewer)

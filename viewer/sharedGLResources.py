@@ -1,9 +1,15 @@
 from PyQt5.QtWidgets import QOpenGLWidget
 from OpenGL.GL import *
+from enum import Enum
+
 import numpy as np
 import cv2
 
 from viewer.logger import Logger
+
+class SharedTexture(Enum):
+    PREDICTION = "pred"
+    SEGMENTATION = "segment"
 
 class SharedGLResources(QOpenGLWidget):
     def __init__(self, width, height, parent=None, data=None):
@@ -29,8 +35,15 @@ class SharedGLResources(QOpenGLWidget):
         self.ebo = self.create_ebo()
         self.fbo, self.fbo_texture = self.create_fbo(self.width_, self.height_)
         self.pred_texture = self.create_texture_2d(self.width_, self.height_)
+        self.segment_texture = self.create_texture_2d(self.width_, self.height_)
 
         self.init = True
+
+    def get_texture(self, texture: SharedTexture):
+        if texture == SharedTexture.PREDICTION:
+            return self.pred_texture
+
+        return self.segment_texture
 
     def create_vbo(self):
         vertices = np.array([
@@ -80,7 +93,6 @@ class SharedGLResources(QOpenGLWidget):
                 img_data = np.ascontiguousarray(img, dtype=np.uint8)
                 img_data = np.flipud(img_data)
         
-        # Texture vide
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, img_data)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4)
@@ -106,22 +118,20 @@ class SharedGLResources(QOpenGLWidget):
         return fbo, tex
 
     def create_texture_2d(self, width, height):
-        """Crée une texture RGB vide, même taille et paramètres que le FBO."""
         tex = glGenTextures(1)
+
         glBindTexture(GL_TEXTURE_2D, tex)
+        
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, None)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
         glBindTexture(GL_TEXTURE_2D, 0)
+
         return tex
 
-    def update_texture_region(self, x, y, w, h, sub_img: np.ndarray):
-        """
-        Met à jour une sous-zone de pred_texture.
-        sub_img doit être de type uint8 et de shape [h, w, 3].
-        """
+    def update_texture_region(self, x, y, w, h, sub_img: np.ndarray, texture: SharedTexture):
         if sub_img.dtype != np.uint8 or sub_img.ndim != 3 or sub_img.shape[2] != 3:
             raise ValueError("sub_img doit être uint8 et [h, w, 3]")
 
@@ -129,7 +139,9 @@ class SharedGLResources(QOpenGLWidget):
 
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
 
-        glBindTexture(GL_TEXTURE_2D, self.pred_texture)
+        tex = self.get_texture(texture)
+
+        glBindTexture(GL_TEXTURE_2D, tex)
         glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h,
                         GL_RGB, GL_UNSIGNED_BYTE, sub_img)
         glBindTexture(GL_TEXTURE_2D, 0)
@@ -139,7 +151,6 @@ class SharedGLResources(QOpenGLWidget):
         self.doneCurrent()
 
     def save_fbo_texture_to_file(self, filename):
-        """Sauvegarde le contenu de la texture du FBO dans un PNG."""
         self.makeCurrent()
 
         glBindFramebuffer(GL_FRAMEBUFFER, self.fbo)
@@ -147,8 +158,6 @@ class SharedGLResources(QOpenGLWidget):
 
         pixels = glReadPixels(0, 0, self.width_, self.height_, GL_RED, GL_UNSIGNED_BYTE)
         img_data = np.frombuffer(pixels, dtype=np.uint8).reshape(self.height_, self.width_)
-
-        # OpenGL a l'origine en bas à gauche, OpenCV en haut à gauche
         img_data = np.flipud(img_data)
 
         cv2.imwrite(filename, img_data)

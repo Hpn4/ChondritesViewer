@@ -3,14 +3,10 @@ import logging
 
 class Logger:
     """
-    Wrapper simple pour configurer un logger coloré avec Rich.
+    Wrapper around Rich
     """
 
     def __init__(self, name="app_logger", level=logging.DEBUG):
-        """
-        :param name: nom du logger
-        :param level: niveau minimal du logger (DEBUG, INFO, ...)
-        """
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
 
